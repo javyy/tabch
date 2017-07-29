@@ -342,68 +342,7 @@ function tdcli_update_callback(data)
 						redis:del("botBOT-IDmarkread")
 						return send(msg.chat_id_, msg.id_, "<i>وضعیت پیام ها  >>  خوانده نشده ✔️\n</i><code>(بدون تیک دوم)</code>")
 					end 
-				elseif text:match("^(افزودن با پیام) (.*)$") then
-					local matches = text:match("^افزودن با پیام (.*)$")
-					if matches == "روشن" then
-						redis:set("botBOT-IDaddmsg", true)
-						return send(msg.chat_id_, msg.id_, "<i>پیام افزودن مخاطب فعال شد</i>")
-					elseif matches == "خاموش" then
-						redis:del("botBOT-IDaddmsg")
-						return send(msg.chat_id_, msg.id_, "<i>پیام افزودن مخاطب غیرفعال شد</i>")
-					end
-				elseif text:match("^(افزودن با شماره) (.*)$") then
-					local matches = text:match("افزودن با شماره (.*)$")
-					if matches == "روشن" then
-						redis:set("botBOT-IDaddcontact", true)
-						return send(msg.chat_id_, msg.id_, "<i>ارسال شماره هنگام افزودن مخاطب فعال شد</i>")
-					elseif matches == "خاموش" then
-						redis:del("botBOT-IDaddcontact")
-						return send(msg.chat_id_, msg.id_, "<i>ارسال شماره هنگام افزودن مخاطب غیرفعال شد</i>")
-					end
-				elseif text:match("^(تنظیم پیام افزودن مخاطب) (.*)") then
-					local matches = text:match("^تنظیم پیام افزودن مخاطب (.*)")
-					redis:set("botBOT-IDaddmsgtext", matches)
-					return send(msg.chat_id_, msg.id_, "<i>پیام افزودن مخاطب ثبت  شد </i>:\n🔹 "..matches.." 🔹")
-				elseif text:match('^(تنظیم جواب) "(.*)" (.*)') then
-					local txt, answer = text:match('^تنظیم جواب "(.*)" (.*)')
-					redis:hset("botBOT-IDanswers", txt, answer)
-					redis:sadd("botBOT-IDanswerslist", txt)
-					return send(msg.chat_id_, msg.id_, "<i>جواب برای | </i>" .. tostring(txt) .. "<i> | تنظیم شد به :</i>\n" .. tostring(answer))
-				elseif text:match("^(حذف جواب) (.*)") then
-					local matches = text:match("^حذف جواب (.*)")
-					redis:hdel("botBOT-IDanswers", matches)
-					redis:srem("botBOT-IDanswerslist", matches)
-					return send(msg.chat_id_, msg.id_, "<i>جواب برای | </i>" .. tostring(matches) .. "<i> | از لیست جواب های خودکار پاک شد.</i>")
-				elseif text:match("^(پاسخگوی خودکار) (.*)$") then
-					local matches = text:match("^پاسخگوی خودکار (.*)$")
-					if matches == "روشن" then
-						redis:set("botBOT-IDautoanswer", true)
-						return send(msg.chat_id_, 0, "<i>پاسخگویی خودکار تبلیغ گر فعال شد</i>")
-					elseif matches == "خاموش" then
-						redis:del("botBOT-IDautoanswer")
-						return send(msg.chat_id_, 0, "<i>حالت پاسخگویی خودکار تبلیغ گر غیر فعال شد.</i>")
-					end
-				elseif text:match("^(تازه سازی)$")then
-					local list = {redis:smembers("botBOT-IDsupergroups"),redis:smembers("botBOT-IDgroups")}
-					tdcli_function({
-						ID = "SearchContacts",
-						query_ = nil,
-						limit_ = 999999999
-					}, function (i, naji)
-						redis:set("botBOT-IDcontacts", naji.total_count_)
-					end, nil)
-					for i, v in pairs(list) do
-							for a, b in pairs(v) do 
-								tdcli_function ({
-									ID = "GetChatMember",
-									chat_id_ = b,
-									user_id_ = bot_id
-								}, function (i,naji)
-									if  naji.ID == "Error" then rem(i.id) 
-									end
-								end, {id=b})
-							end
-					end
+				
 					return send(msg.chat_id_,msg.id_,"<i>تازه‌سازی آمار تبلیغ‌گر شماره </i><code> BOT-ID </code> با موفقیت انجام شد.")
 				elseif text:match("^(وضعیت)$") then
 					local s = redis:get("botBOT-IDmaxjoin") and redis:ttl("botBOT-IDmaxjoin") or 0
@@ -494,66 +433,7 @@ function tdcli_update_callback(data)
 							parse_mode_ = nil
 							},
 						}, dl_cb, nil)
-					end
-                    			return send(msg.chat_id_, msg.id_, "<i>با موفقیت فرستاده شد</i>")
-				elseif text:match("^(مسدودیت) (%d+)$") then
-					local matches = text:match("%d+")
-					rem(tonumber(matches))
-					redis:sadd("botBOT-IDblockedusers",matches)
-					tdcli_function ({
-						ID = "BlockUser",
-						user_id_ = tonumber(matches)
-					}, dl_cb, nil)
-					return send(msg.chat_id_, msg.id_, "<i>کاربر مورد نظر مسدود شد</i>")
-				elseif text:match("^(رفع مسدودیت) (%d+)$") then
-					local matches = text:match("%d+")
-					add(tonumber(matches))
-					redis:srem("botBOT-IDblockedusers",matches)
-					tdcli_function ({
-						ID = "UnblockUser",
-						user_id_ = tonumber(matches)
-					}, dl_cb, nil)
-					return send(msg.chat_id_, msg.id_, "<i>مسدودیت کاربر مورد نظر رفع شد.</i>")	
-				elseif text:match('^(تنظیم نام) "(.*)" (.*)') then
-					local fname, lname = text:match('^تنظیم نام "(.*)" (.*)')
-					tdcli_function ({
-						ID = "ChangeName",
-						first_name_ = fname,
-						last_name_ = lname
-					}, dl_cb, nil)
-					return send(msg.chat_id_, msg.id_, "<i>نام جدید با موفقیت ثبت شد.</i>")
-				elseif text:match("^(تنظیم نام کاربری) (.*)") then
-					local matches = text:match("^تنظیم نام کاربری (.*)")
-						tdcli_function ({
-						ID = "ChangeUsername",
-						username_ = tostring(matches)
-						}, dl_cb, nil)
-					return send(msg.chat_id_, 0, '<i>تلاش برای تنظیم نام کاربری...</i>')
-				elseif text:match("^(حذف نام کاربری)$") then
-					tdcli_function ({
-						ID = "ChangeUsername",
-						username_ = ""
-					}, dl_cb, nil)
-					return send(msg.chat_id_, 0, '<i>نام کاربری با موفقیت حذف شد.</i>')
-				elseif text:match('^(ارسال کن) "(.*)" (.*)') then
-					local id, txt = text:match('^ارسال کن "(.*)" (.*)')
-					send(id, 0, txt)
-					return send(msg.chat_id_, msg.id_, "<i>ارسال شد</i>")
-				elseif text:match("^(بگو) (.*)") then
-					local matches = text:match("^بگو (.*)")
-					return send(msg.chat_id_, 0, matches)
-				elseif text:match("^(شناسه من)$") then
-					return send(msg.chat_id_, msg.id_, "<i>" .. msg.sender_user_id_ .."</i>")
-				elseif text:match("^(ترک کردن) (.*)$") then
-					local matches = text:match("^ترک کردن (.*)$") 	
-					send(msg.chat_id_, msg.id_, 'تبلیغ‌گر از گروه مورد نظر خارج شد')
-					tdcli_function ({
-						ID = "ChangeChatMemberStatus",
-						chat_id_ = matches,
-						user_id_ = bot_id,
-						status_ = {ID = "ChatMemberStatusLeft"},
-					}, dl_cb, nil)
-					return rem(matches)
+					endreturn rem(matches)
 				elseif text:match("^(افزودن به همه) (%d+)$") then
 					local matches = text:match("%d+")
 					local list = {redis:smembers("botBOT-IDgroups"),redis:smembers("botBOT-IDsupergroups")}
